@@ -125,11 +125,11 @@ int main() {
 
         } else if(id_ex->opcode == MOVI || id_ex->opcode == BEQZ || id_ex->opcode == BR || id_ex->opcode == SAL || id_ex->opcode == SAR || id_ex->opcode == ANDI) {
             id_ex->r1 = (if_id->instruction >> 6) & 0x3F; // Extract r1
-            id_ex->imm = if_id->instruction & 0x3F; // Extract immediate value
+            id_ex->imm = sign_extend_6bit(if_id->instruction & 0x3F); // Extract immediate value
 
         } else if(id_ex->opcode == LDR || id_ex->opcode == STR) {
             id_ex->r1 = (if_id->instruction >> 6) & 0x3F; // Extract r1
-            id_ex->imm = if_id->instruction & 0x3F; // Extract immediate value for memory address
+            id_ex->imm = sign_extend_6bit(if_id->instruction & 0x3F); // Extract immediate value for memory address
         }
         id_ex->valid = 1; // Mark the instruction as valid for the execute stage
     }
