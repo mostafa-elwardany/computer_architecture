@@ -1,5 +1,8 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h> 
+#include <string.h>    
+#include <ctype.h> 
 #define ADD 0
 #define SUB 1
 #define MUL 2
@@ -13,20 +16,37 @@
 #define LDR 10
 #define STR 11 //these are just to help with comparasion instead of writing the bit values
 
-typedef struct {// pipeline register between IF and ID stages
-        uint16_t instruction;
-        int valid;
-        short int pc;
-    } IF_ID;
 
-    typedef struct {// pipeline register between ID and EX stages
-        int8_t opcode;
-        int8_t r1, r2;
-        int8_t imm;//immediate value for any immediate instructions
-        int8_t val1, val2;  // actual register values tho feel like they should be signed bits instead of unsigned
-        int valid;
-        short int pc;
-    } ID_EX;
+int loadProgram(const char *filename, short int instructionMemory[1024]);
+void execute(ID_EX *id_ex, int8_t *R, int8_t *SREG, int8_t *dataMemory, short int *PC, IF_ID *if_id);
+void decode(int8_t *R, IF_ID *if_id, ID_EX *id_ex);
+void fetch(short int *PC, short int program_size, short int instructionMemory[], IF_ID *if_id);
+void printreg(int8_t *R);
+void printSREG(int8_t sreg);
+void printmemory(int8_t *dataMemory);
+int8_t sign_extend_6bit(int8_t val);
+
+
+static void trim(char *s);
+static int parseRegister(const char *tok);
+int parseImmediate(const char *tok);
+static int getOpcode(const char *mn);
+static int isRFormat(int opcode);
+
+typedef struct {
+    uint16_t instruction;
+    int valid;
+    short int pc;
+} IF_ID;
+
+typedef struct {
+    int8_t opcode;
+    int8_t r1, r2;
+    int8_t imm;
+    int8_t val1, val2;
+    int valid;
+    short int pc;
+} ID_EX;ID_EX;
 
 int main() {
     int clock_cycle = 0;
@@ -39,10 +59,14 @@ int main() {
     ID_EX id_ex = {0};
     int program_size = loadProgram("assembly_code.txt", &instructionMemory);
     while (1) {
+        printf("Clock Cycle: %d\n", clock_cycle);
         execute(&id_ex,R,&SREG,dataMemory,&PC,&if_id);
         decode(R, &if_id, &id_ex);
         fetch(&PC, program_size, instructionMemory, &if_id);
         clock_cycle++;
+        printreg(R);
+        printSREG(SREG);
+        printmemory(dataMemory);
     }
     return 0;
 }
@@ -50,6 +74,7 @@ int main() {
  void execute(ID_EX *id_ex, int8_t *R, int8_t *SREG, int8_t *dataMemory, short int *PC, IF_ID *if_id) {
         // Implementation of the execute stage
         if(id_ex->valid == 0) {
+            printf("No instruction to execute at clock cycle %d\n");
             return; // No valid instruction to execute
         }
         else{
@@ -57,6 +82,8 @@ int main() {
         int16_t result;
         switch(id_ex->opcode) {
             case ADD://checks for carry flag,zero,negative,sign,overflow flags
+                printf("Executing ADD instruction\n");
+                printf("val1(r1): %d, val2(r2): %d\n", id_ex->val1, id_ex->val2);
                 result = id_ex->val1 + id_ex->val2;
                 if(result >> 8 == 1) { // Check for carry out of the 8th bit
                     *SREG |= 0x10; // Set carry flag
@@ -82,8 +109,11 @@ int main() {
                 }
                 id_ex->val1 = id_ex->val1 + id_ex->val2;
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+                printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case SUB://check for overflow,sign,negative,zero flags will do later
+                 printf("Executing SUB instruction\n");
+                printf("val1(r1): %d, val2(r2): %d\n", id_ex->val1, id_ex->val2);
                 result = id_ex->val1 - id_ex->val2;
                  if(id_ex->val1 > 0 && id_ex ->val2 <0) {
                     if(result >> 8 == 1) { // Check for overflow in case of adding two positive numbers resulting in a negative number
@@ -106,8 +136,11 @@ int main() {
                 }
                 id_ex->val1 = id_ex->val1 - id_ex->val2;
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+                printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case MUL:
+                 printf("Executing MUL instruction\n");
+                printf("val1(r1): %d, val2(r2): %d\n", id_ex->val1, id_ex->val2);
                 result = id_ex->val1 * id_ex->val2;
                 if(id_ex->val1 * id_ex->val2 < 0) { // Check for negative result
                     *SREG |= 0x04; // Set negative flag
@@ -117,8 +150,11 @@ int main() {
                 }
                 id_ex->val1 = id_ex->val1 * id_ex->val2;
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+                printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case EOR:
+                printf("Executing EOR instruction\n");
+                printf("val1(r1): %d, val2(r2): %d\n", id_ex->val1, id_ex->val2);
                 if(id_ex->val1 ^ id_ex->val2 < 0) { // Check for negative result
                     *SREG |= 0x04; // Set negative flag
                 }
@@ -127,10 +163,14 @@ int main() {
                 }
                 id_ex->val1 = id_ex->val1 ^ id_ex->val2;
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+                printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case MOVI:
+                printf("Executing MOVI instruction\n");
+                printf("Immediate value: %d, val1(r1): %d\n", id_ex->imm, id_ex->val1);
                 id_ex->val1 = id_ex->imm; // Move immediate value to val1
                 R[id_ex->r1] = id_ex->val1; // Write the immediate value to the register file
+                printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case BEQZ:
                 if(id_ex->val1 == 0) {
@@ -140,11 +180,14 @@ int main() {
                 }
                 break;
             case ANDI:
+                 printf("Executing ANDI instruction\n");
+                 printf("Immediate value: %d, val1(r1): %d\n", id_ex->imm, id_ex->val1);
                 id_ex->val1 = id_ex->val1 & id_ex->imm; // AND immediate value with val1
                R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
                if(id_ex->val1 & id_ex->imm < 0) { // Check for negative result
                     *SREG |= 0x04; // Set negative flag
                 }
+                 printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case BR:
                 // Unconditional branch to the address specified by imm
@@ -152,20 +195,31 @@ int main() {
                 if_id->valid = 0; // Invalidate the instruction in the IF/ID pipeline register since we are branching
                 break;
             case SLC:
-                id_ex->val1 = id_ex->val1 << id_ex->imm; // Shift left logical by imm bits
-                R[id_ex->r1] = id_ex->val1; // Write the result back to the register file   
+                printf("Executing SLC instruction\n");
+                printf("Immediate value: %d, val1(r1): %d\n", id_ex->imm, id_ex->val1);
+                 id_ex->val1 = (id_ex->val1 << id_ex->imm) | (id_ex->val1 >> (8 - id_ex->imm)); // Shift left circular
+                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+                 printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case SRC:
-                id_ex->val1 = id_ex->val1 >> id_ex->imm; // Shift right arithmetic by imm bits
-                R[id_ex->r1] = id_ex->val1; // Write the result back to the register file  
+                printf("Executing SRC instruction\n");
+                printf("Immediate value: %d, val1(r1): %d\n", id_ex->imm, id_ex->val1);
+                id_ex->val1 = (id_ex->val1 >> id_ex->imm) | (id_ex->val1 << (8 - id_ex->imm)); // Shift right circular
+                R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+                printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case LDR:
+            printf("Executing LDR instruction\n");
+                printf("Memory address: %d, val1(r1): %d\n", id_ex->val1, id_ex->val1);
                 id_ex->val1 = id_ex->imm; 
                 R[id_ex->r1] = dataMemory[id_ex->val1]; // Load the value from memory into the register file
                 break;
             case STR:
+                  printf("Executing STR instruction\n");
+                printf("Memory address: %d, val1(r1): %d\n", id_ex->val1, id_ex->val1);
                 id_ex->val1 = id_ex->imm; 
                 dataMemory[id_ex->val1] = R[id_ex->r1]; // Store the value from the register file into memory
+              
                 break;
         }
     }
@@ -174,6 +228,7 @@ int main() {
         // Implementation of the decode stage
         if(if_id->valid == 0) {
             id_ex->valid = 0; // No valid instruction to decode
+            printf("No instruction to decode at clock cycle %d\n");
             return;
         }
         else{
@@ -358,7 +413,7 @@ static int parseRegister(const char *tok) {
 }
  
 /* Signed decimal -> int  (handles negative immediates) */
-static int parseImmediate(const char *tok) {
+int parseImmediate(const char *tok) {
     return atoi(tok);
 }
  
@@ -380,7 +435,41 @@ static int getOpcode(const char *mn) {
 }
  
 /* R-format instructions use two register operands */
-static int isRFormat(int opcode) {
+ int isRFormat(int opcode) {
     return (opcode == ADD || opcode == SUB || opcode == MUL ||
             opcode == EOR || opcode == BR);
+}
+
+void printreg(int8_t *R) {
+    printf("Registers: ");
+    for(int i = 0; i < 64; i++) {
+        printf("R%d=%d ", i, R[i]);
+    }
+    printf("\n");
+}
+
+void printSREG(int8_t sreg) {
+    printf("SREG = 0x%02X\n", sreg);
+    printf("Bits: ");
+    for (int i = 7; i >= 0; i--) {
+        printf("%d ", (sreg >> i) & 1);
+    }
+    printf("\n");
+    printf("Pos:  7 6 5 4 3 2 1 0\n");
+    printf("      - - - C V N S Z\n");  // Flag names
+}
+
+void printmemory(int8_t *dataMemory) {
+    printf("Data Memory:\n");
+    for(int i = 0; i < 2048; i++) { 
+        printf("0x%04X: %d\n", i, dataMemory[i]);
+    }
+}
+
+int8_t sign_extend_6bit(int8_t val) {
+    /* If bit 5 (the sign bit in 6-bit) is set, extend with 1's */
+    if (val & 0x20) {  // 0x20 = 0b100000 (bit 5)
+        val |= 0xC0;   // 0xC0 = 0b11000000 (set bits 7 and 6)
+    }
+    return val;
 }
