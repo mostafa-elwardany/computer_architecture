@@ -17,6 +17,21 @@
 #define STR 11 //these are just to help with comparasion instead of writing the bit values
 
 
+typedef struct {
+    uint16_t instruction;
+    int valid;
+    short int pc;
+} IF_ID;
+
+typedef struct {
+    int8_t opcode;
+    int8_t r1, r2;
+    int8_t imm;
+    int8_t val1, val2;
+    int valid;
+    short int pc;
+} ID_EX;
+
 int loadProgram(const char *filename, short int instructionMemory[1024]);
 void execute(ID_EX *id_ex, int8_t *R, int8_t *SREG, int8_t *dataMemory, short int *PC, IF_ID *if_id);
 void decode(int8_t *R, IF_ID *if_id, ID_EX *id_ex);
@@ -33,41 +48,31 @@ int parseImmediate(const char *tok);
 static int getOpcode(const char *mn);
 static int isRFormat(int opcode);
 
-typedef struct {
-    uint16_t instruction;
-    int valid;
-    short int pc;
-} IF_ID;
-
-typedef struct {
-    int8_t opcode;
-    int8_t r1, r2;
-    int8_t imm;
-    int8_t val1, val2;
-    int valid;
-    short int pc;
-} ID_EX;ID_EX;
-
 int main() {
     int clock_cycle = 0;
-    short int instructionMemory[1024];
-    int8_t dataMemory[2048];
+    short int instructionMemory[1024] = {0};
+     int8_t dataMemory[2048] = {0};
     int8_t R[64]; //REGISTERS
     int8_t SREG;  // flags
     short int PC=0;  // program counter
     IF_ID if_id = {0};
     ID_EX id_ex = {0};
-    int program_size = loadProgram("assembly_code.txt", &instructionMemory);
+    int program_size = loadProgram("assembly_code.txt",instructionMemory);
     while (1) {
         printf("Clock Cycle: %d\n", clock_cycle);
         execute(&id_ex,R,&SREG,dataMemory,&PC,&if_id);
         decode(R, &if_id, &id_ex);
         fetch(&PC, program_size, instructionMemory, &if_id);
         clock_cycle++;
-        printreg(R);
-        printSREG(SREG);
-        printmemory(dataMemory);
+        if(PC >= program_size && if_id.valid == 0 && id_ex.valid == 0) {
+            printf("Program execution completed.\n");
+            break; // Exit the loop when there are no more instructions to execute
+        }
     }
+    printreg(R);
+    printSREG(SREG);
+    printmemory(dataMemory);
+    printAllInstructions(instructionMemory, program_size);
     return 0;
 }
 
@@ -462,7 +467,7 @@ void printSREG(int8_t sreg) {
 void printmemory(int8_t *dataMemory) {
     printf("Data Memory:\n");
     for(int i = 0; i < 2048; i++) { 
-        printf("0x%04X: %d\n", i, dataMemory[i]);
+        printf("address: %d value: %d\n", i, dataMemory[i]);
     }
 }
 
@@ -472,4 +477,18 @@ int8_t sign_extend_6bit(int8_t val) {
         val |= 0xC0;   // 0xC0 = 0b11000000 (set bits 7 and 6)
     }
     return val;
+}
+
+void printAllInstructions(short int *instructionMemory, int program_size) {
+    printf("\nInstruction Memory (%d instructions):\n", program_size);
+    for (int i = 0; i < program_size; i++) {
+        uint16_t instr = (uint16_t)instructionMemory[i];
+        printf("  0x%04X [%04d]: 0x%04X = ", i, i, instr);
+        // Print binary
+        for (int b = 15; b >= 0; b--) {
+            printf("%d", (instr >> b) & 1);
+            if (b == 12 || b == 6) printf(" ");
+        }
+        printf("\n");
+    }
 }
