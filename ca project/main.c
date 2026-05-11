@@ -39,6 +39,7 @@ void fetch(short int *PC, short int program_size, short int instructionMemory[],
 void printreg(int8_t *R);
 void printSREG(int8_t sreg);
 void printmemory(int8_t *dataMemory);
+void printAllInstructions(short int *instructionMemory, int program_size);
 int8_t sign_extend_6bit(int8_t val);
 
 
@@ -52,12 +53,12 @@ int main() {
     int clock_cycle = 0;
     short int instructionMemory[1024] = {0};
      int8_t dataMemory[2048] = {0};
-    int8_t R[64]; //REGISTERS
-    int8_t SREG;  // flags
+    int8_t R[64]= {0}; //REGISTERS
+    int8_t SREG=0;  // flags
     short int PC=0;  // program counter
     IF_ID if_id = {0};
     ID_EX id_ex = {0};
-    int program_size = loadProgram("assembly_code.txt",instructionMemory);
+    int program_size = loadProgram("assembly.txt",instructionMemory);
     while (1) {
         printf("Clock Cycle: %d\n", clock_cycle);
         execute(&id_ex,R,&SREG,dataMemory,&PC,&if_id);
@@ -69,17 +70,17 @@ int main() {
             break; // Exit the loop when there are no more instructions to execute
         }
     }
-    printreg(R);
+    /*printreg(R);
     printSREG(SREG);
     printmemory(dataMemory);
-    printAllInstructions(instructionMemory, program_size);
+    printAllInstructions(instructionMemory, program_size);*/
     return 0;
 }
 
  void execute(ID_EX *id_ex, int8_t *R, int8_t *SREG, int8_t *dataMemory, short int *PC, IF_ID *if_id) {
         // Implementation of the execute stage
         if(id_ex->valid == 0) {
-            printf("No instruction to execute at clock cycle %d\n");
+            printf("No instruction to execute at clock cycle\n");
             return; // No valid instruction to execute
         }
         else{
@@ -90,27 +91,33 @@ int main() {
                 printf("Executing ADD instruction\n");
                 printf("val1(r1): %d, val2(r2): %d\n", id_ex->val1, id_ex->val2);
                 result = id_ex->val1 + id_ex->val2;
-                if(result >> 8 == 1) { // Check for carry out of the 8th bit
+                if((result >> 8) == 1) { // Check for carry out of the 8th bit
                     *SREG |= 0x10; // Set carry flag
+                    printf("Carry flag set\n");
                 } 
-                if(id_ex->val1 > 0 && id_ex ->val2 >0) {
-                    if(result >> 8 == 1) { // Check for overflow in case of adding two positive numbers resulting in a negative number
+                if((id_ex->val1 > 0) && (id_ex ->val2 > 0)) {
+                    if((result >> 8) == 1) { // Check for overflow in case of adding two positive numbers resulting in a negative number
                         *SREG |= 0x08; // Set overflow flag
+                        printf("Overflow flag set\n");
                     }
                 }
-                if(id_ex->val1 < 0 && id_ex ->val2 < 0) {
-                    if(result >> 8 == 0) { // Check for overflow in case of adding two negative numbers resulting in a positive number
+                if((id_ex->val1 < 0) && (id_ex ->val2 < 0)) {
+                    if((result >> 8) == 0) { // Check for overflow in case of adding two negative numbers resulting in a positive number
                         *SREG |= 0x08; // Set overflow flag
+                        printf("Overflow flag set\n");
                     }
                 }
                 if((result & 0xFF) == 0) { // Check for zero result
                     *SREG |= 0x01; // Set zero flag
+                    printf("Zero flag set\n");
                 }
-                if(id_ex->val1 + id_ex->val2 < 0) { // Check for negative result
+                if((id_ex->val1 + id_ex->val2) < 0) { // Check for negative result
                     *SREG |= 0x04; // Set negative flag
+                    printf("Negative flag set\n");
                 }
-                if((*SREG && 0x00) >> 3 ^ (*SREG && 0x00) >> 2) { // Check for sign change between the 3rd and 4th bits to set the sign flag
+                if(((*SREG & 0x01) >> 3) ^ ((*SREG & 0x01) >> 2)) { // Check for sign change between the 3rd and 4th bits to set the sign flag
                     *SREG |= 0x02; // Set sign flag
+                    printf("Sign flag set\n");
                 }
                 id_ex->val1 = id_ex->val1 + id_ex->val2;
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
@@ -120,24 +127,29 @@ int main() {
                  printf("Executing SUB instruction\n");
                 printf("val1(r1): %d, val2(r2): %d\n", id_ex->val1, id_ex->val2);
                 result = id_ex->val1 - id_ex->val2;
-                 if(id_ex->val1 > 0 && id_ex ->val2 <0) {
-                    if(result >> 8 == 1) { // Check for overflow in case of adding two positive numbers resulting in a negative number
+                 if(id_ex->val1 > 0 && (id_ex ->val2 <0)) {
+                    if((result >> 8) == 1) { // Check for overflow in case of adding two positive numbers resulting in a negative number
                         *SREG |= 0x08; // Set overflow flag
+                        printf("Overflow flag set\n");
                     }
                 }
-                if(id_ex->val1 < 0 && id_ex ->val2 > 0) {
-                    if(result >> 8 == 0) { // Check for overflow in case of adding two negative numbers resulting in a positive number
+                if((id_ex->val1 < 0) && (id_ex ->val2 > 0)) {
+                    if((result >> 8) == 0) { // Check for overflow in case of adding two negative numbers resulting in a positive number
                         *SREG |= 0x08; // Set overflow flag
+                        printf("Overflow flag set\n");
                     }
                 }
-                 if(id_ex->val1 - id_ex->val2 < 0) { // Check for negative result
+                 if((id_ex->val1 - id_ex->val2) < 0) { // Check for negative result
                     *SREG |= 0x04; // Set negative flag
+                    printf("Negative flag set\n");
                 }
                 if((result & 0xFF) == 0) { // Check for zero result
                     *SREG |= 0x01; // Set zero flag
+                    printf("Zero flag set\n");
                 }
-                 if((*SREG&& 0x00) >> 3 ^ (*SREG&& 0x00) >> 2) { // Check for sign change between the 3rd and 4th bits to set the sign flag
+                 if(((*SREG & 0x01) >> 3) ^ ((*SREG & 0x01) >> 2)) { // Check for sign change between the 3rd and 4th bits to set the sign flag
                     *SREG |= 0x02; // Set sign flag
+                    printf("Sign flag set\n");
                 }
                 id_ex->val1 = id_ex->val1 - id_ex->val2;
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
@@ -147,11 +159,13 @@ int main() {
                  printf("Executing MUL instruction\n");
                 printf("val1(r1): %d, val2(r2): %d\n", id_ex->val1, id_ex->val2);
                 result = id_ex->val1 * id_ex->val2;
-                if(id_ex->val1 * id_ex->val2 < 0) { // Check for negative result
+                if((id_ex->val1 * id_ex->val2) < 0) { // Check for negative result
                     *SREG |= 0x04; // Set negative flag
+                    printf("Negative flag set\n");
                 }
                 if((result & 0xFF) == 0) { // Check for zero result
                     *SREG |= 0x01; // Set zero flag
+                    printf("Zero flag set\n");
                 }
                 id_ex->val1 = id_ex->val1 * id_ex->val2;
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
@@ -160,11 +174,13 @@ int main() {
             case EOR:
                 printf("Executing EOR instruction\n");
                 printf("val1(r1): %d, val2(r2): %d\n", id_ex->val1, id_ex->val2);
-                if(id_ex->val1 ^ id_ex->val2 < 0) { // Check for negative result
+                if((id_ex->val1 ^ id_ex->val2) < 0) { // Check for negative result
                     *SREG |= 0x04; // Set negative flag
+                    printf("Negative flag set\n");
                 }
                 if((id_ex->val1 ^ id_ex->val2) == 0) { // Check for zero result
                     *SREG |= 0x01; // Set zero flag
+                    printf("Zero flag set\n");
                 }
                 id_ex->val1 = id_ex->val1 ^ id_ex->val2;
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
@@ -182,22 +198,31 @@ int main() {
                     // Branch to the address specified by imm if val1 is zero
                     *PC = id_ex->pc + id_ex->imm;
                     if_id->valid = 0; // Invalidate the instruction in the IF/ID pipeline register since we are branching
+                    id_ex->valid = 0; // Invalidate the instruction in the ID/EX pipeline register since we are branching
+                     printf("Executing BEQZ instruction: Branch taken to address %d\n", *PC);
                 }
                 break;
             case ANDI:
                  printf("Executing ANDI instruction\n");
                  printf("Immediate value: %d, val1(r1): %d\n", id_ex->imm, id_ex->val1);
+               if((id_ex->val1 & id_ex->imm) < 0) { // Check for negative result
+                    *SREG |= 0x04; // Set negative flag
+                    printf("Negative flag set\n");
+                }
+                if((id_ex->val1 ^ id_ex->val2) == 0) { // Check for zero result
+                    *SREG |= 0x01; // Set zero flag
+                    printf("Zero flag set\n");
+                }
                 id_ex->val1 = id_ex->val1 & id_ex->imm; // AND immediate value with val1
                R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
-               if(id_ex->val1 & id_ex->imm < 0) { // Check for negative result
-                    *SREG |= 0x04; // Set negative flag
-                }
                  printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case BR:
                 // Unconditional branch to the address specified by imm
                 *PC = ((id_ex->val1 & 0xFF) << 8) | (id_ex->val2 & 0xFF);
                 if_id->valid = 0; // Invalidate the instruction in the IF/ID pipeline register since we are branching
+                id_ex->valid = 0; // Invalidate the instruction in the ID/EX pipeline register since we are branching
+                 printf("Executing BR instruction: Branching to address %d\n", *PC);
                 break;
             case SLC:
                 printf("Executing SLC instruction\n");
@@ -222,7 +247,6 @@ int main() {
             case STR:
                   printf("Executing STR instruction\n");
                 printf("Memory address: %d, val1(r1): %d\n", id_ex->val1, id_ex->val1);
-                id_ex->val1 = id_ex->imm; 
                 dataMemory[id_ex->val1] = R[id_ex->r1]; // Store the value from the register file into memory
               
                 break;
@@ -233,7 +257,7 @@ int main() {
         // Implementation of the decode stage
         if(if_id->valid == 0) {
             id_ex->valid = 0; // No valid instruction to decode
-            printf("No instruction to decode at clock cycle %d\n");
+            printf("No instruction to decode at clock cycle\n");
             return;
         }
         else{
@@ -247,6 +271,7 @@ int main() {
 
         } else if(id_ex->opcode == MOVI || id_ex->opcode == BEQZ || id_ex->opcode == SLC || id_ex->opcode == SRC || id_ex->opcode == ANDI) {
             id_ex->r1 = (if_id->instruction >> 6) & 0x3F; // Extract r1
+            id_ex->val1 = R[id_ex->r1]; // Read value of r1
             id_ex->imm = sign_extend_6bit(if_id->instruction & 0x3F); // Extract immediate value
 
         } else if(id_ex->opcode == LDR || id_ex->opcode == STR) {
