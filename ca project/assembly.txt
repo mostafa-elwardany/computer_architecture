@@ -1,1 +1,102 @@
-LDR R1 5
+# Test 1: MOVI simple load immediate
+MOVI R1 5
+MOVI R2 -3
+# Expected: R1=5, R2=-3, SREG=0x00
+
+# Test 2: ADD basic addition with valid 6-bit immediates
+MOVI R1 25
+MOVI R2 6
+ADD R1 R2
+# Expected: R1=31, R2=6, SREG=0x00
+
+# Test 3: ADD result within 8-bit range
+MOVI R1 31
+MOVI R2 31
+ADD R1 R2
+# Expected: R1=62, R2=31, SREG=0x00
+
+# Test 4: SUB positive result
+MOVI R1 31
+MOVI R2 18
+SUB R1 R2
+# Expected: R1=13, R2=18, SREG=0x00
+
+# Test 5: SUB negative result
+MOVI R1 30
+MOVI R2 31
+SUB R1 R2
+# Expected: R1=-1, R2=31, SREG bits: N=1, Z=0, V=0, S=1 -> SREG=0x06
+
+# Test 6: MUL positive result
+MOVI R1 12
+MOVI R2 15
+MUL R1 R2
+# Expected: R1=180, R2=15, SREG bits: N=1 -> SREG=0x04
+
+# Test 7: MUL zero result
+MOVI R1 16
+MOVI R2 16
+MUL R1 R2
+# Expected: R1=0, R2=16, SREG bits: Z=1 -> SREG=0x01
+
+# Test 8: ANDI with signed 6-bit immediates
+MOVI R1 -11    # equivalent 6-bit signed immediate for original 0b10110101
+ANDI R1 -16    # equivalent 6-bit signed immediate for original 0b11110000
+# Expected: R1=0xB0 (-80), SREG bits: N=1 -> SREG=0x04
+
+# Test 9: EOR with signed 6-bit immediates
+MOVI R1 -22    # equivalent 6-bit signed immediate for original 0b10101010
+MOVI R2 -16    # equivalent 6-bit signed immediate for original 0b11110000
+EOR R1 R2
+# Expected: R1=90, SREG=0x00
+
+# Test 10: SLC circular left shift
+MOVI R1 6
+SLC R1 2
+# Expected: R1=24, SREG=0x00
+
+# Test 11: SLC rotation wrap
+MOVI R1 3
+SLC R1 2
+# Expected: R1=12, SREG=0x00
+
+# Test 12: SRC circular right shift
+MOVI R1 3
+SRC R1 2
+# Expected: R1=192, SREG bits: N=1 -> SREG=0x04
+
+# Test 13: BEQZ branch taken
+MOVI R1 0
+BEQZ R1 2
+MOVI R2 99
+MOVI R2 55
+# Expected: skip MOVI R2 99, final R2=55
+
+# Test 14: BEQZ branch not taken
+MOVI R1 5
+BEQZ R1 2
+MOVI R2 99
+MOVI R2 55
+# Expected: execute MOVI R2 99, final R2=99
+
+# Test 15: BR direct jump
+MOVI R1 0
+MOVI R2 3
+BR R1 R2
+# Expected: PC = 3
+
+# Test 16: BR with non-zero upper byte
+MOVI R1 1
+MOVI R2 5
+BR R1 R2
+# Expected: PC = 261
+
+# Test 17: LDR load from memory
+MOVI R1 10
+LDR R1 10
+# Expected: R1 = dataMemory[10]
+
+# Test 18: STR store to memory
+MOVI R1 15
+STR R1 5
+# Expected: dataMemory[5] = 15
