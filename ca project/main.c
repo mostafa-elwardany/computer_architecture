@@ -59,6 +59,7 @@ int main() {
     IF_ID if_id = {0};
     ID_EX id_ex = {0};
     int program_size = loadProgram("assembly.txt",instructionMemory);
+    printf("Program loaded with %d instructions.\n", program_size);
     addValues(R);
     datavalues(dataMemory);
     while (1) {
@@ -95,7 +96,7 @@ int main() {
                 printf("val1(r1): %d, val2(r2): %d\n", id_ex->val1, id_ex->val2);
                 result = id_ex->val1 + id_ex->val2;
                 printf("Result of addition: %d\n", result);
-                if((result >> 8) == 1) { // Check for carry out of the 8th bit
+                if((result & 0x100) != 0) { // Check for carry out of the 8th bit
                     *SREG |= 0x10; // Set carry flag
                     printf("Carry flag set\n");
                 } 
@@ -232,14 +233,18 @@ int main() {
             case SLC:
                 printf("Executing SLC instruction\n");
                 printf("Immediate value: %d, val1(r1): %d\n", id_ex->imm, id_ex->val1);
-                 id_ex->val1 = (id_ex->val1 << id_ex->imm) | (id_ex->val1 >> (8 - id_ex->imm)); // Shift left circular
+                unsigned char uval = (unsigned char)id_ex->val1;
+                unsigned char uresult = ((uval << id_ex->imm) | (uval >> (8 - id_ex->imm)));
+                id_ex->val1 = (int8_t)uresult;  // Store back as signed
                  R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
                  printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case SRC:
                 printf("Executing SRC instruction\n");
                 printf("Immediate value: %d, val1(r1): %d\n", id_ex->imm, id_ex->val1);
-                id_ex->val1 = (id_ex->val1 >> id_ex->imm) | (id_ex->val1 << (8 - id_ex->imm)); // Shift right circular
+                unsigned char uval2 = (unsigned char)id_ex->val1;
+                unsigned char uresult2 = ((uval2 >> id_ex->imm) | (uval2 << (8 - id_ex->imm)));
+                id_ex->val1 = (int8_t)uresult2;  // Store back as signed
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
                 printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
@@ -300,8 +305,8 @@ int main() {
         if(*PC < program_size) {//would need to change this when we actually implement the instruction loading into memory
             if_id->instruction = instructionMemory[*PC];
             if_id->valid = 1;
+             if_id->pc = *PC;
             (*PC)++;
-            if_id->pc = *PC;
             printf("Fetched instruction 0x%04X from address %d\n", if_id->instruction, *PC - 1);
         } else {
             if_id->valid = 0; // No more instructions to fetch
