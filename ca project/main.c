@@ -203,7 +203,7 @@ int main() {
             case BEQZ:
                 if(id_ex->val1 == 0) {
                     // Branch to the address specified by imm if val1 is zero
-                    *PC = id_ex->pc + id_ex->imm;
+                    *PC = id_ex->pc + id_ex->imm+1;
                     if_id->valid = 0; // Invalidate the instruction in the IF/ID pipeline register since we are branching
                     id_ex->valid = 0; // Invalidate the instruction in the ID/EX pipeline register since we are branching
                      printf("Executing BEQZ instruction: Branch taken to address %d\n", *PC);
