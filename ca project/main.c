@@ -179,6 +179,7 @@ int main() {
             case EOR:
                 printf("Executing EOR instruction\n");
                 printf("val1(r1): %d, val2(r2): %d\n", id_ex->val1, id_ex->val2);
+                result = id_ex->val1 ^ id_ex->val2;
                 if((result & 0x80) != 0) { // Check for negative result
                     *SREG |= 0x04; // Set negative flag
                     printf("Negative flag set\n");
@@ -215,7 +216,7 @@ int main() {
                     *SREG |= 0x04; // Set negative flag
                     printf("Negative flag set\n");
                 }
-                if((id_ex->val1 ^ id_ex->val2) == 0) { // Check for zero result
+                if((id_ex->val1 & id_ex->imm) == 0) { // Check for zero result
                     *SREG |= 0x01; // Set zero flag
                     printf("Zero flag set\n");
                 }
