@@ -60,8 +60,6 @@ int main() {
     ID_EX id_ex = {0};
     int program_size = loadProgram("assembly.txt",instructionMemory);
     printf("Program loaded with %d instructions.\n", program_size);
-    addValues(R);
-    datavalues(dataMemory);
     while (1) {
         printf("Clock Cycle: %d\n", clock_cycle);
         execute(&id_ex,R,&SREG,dataMemory,&PC,&if_id);
@@ -326,15 +324,13 @@ int main() {
  
     while (fgets(line, sizeof(line), file) != NULL) {
  
-        /* ── Normalise the line ─────────────────────────────────────────── */
-        line[strcspn(line, "\r\n")] = '\0';   /* strip CR / LF */
+        
+        line[strcspn(line, "\r\n")] = '\0';   
         trim(line);
  
-        /* Skip blank lines and comment lines */
+        
         if (line[0] == '\0' || line[0] == '#' || line[0] == ';')
             continue;
- 
-        /* Remove inline comments (everything from '#' or ';' onward) */
         char *commentPos = strpbrk(line, "#;");
         if (commentPos) {
             *commentPos = '\0';
@@ -342,15 +338,12 @@ int main() {
         }
         if (line[0] == '\0') continue;
  
-        /* ── Tokenise: MNEMONIC  OP1  OP2 ──────────────────────────────── */
         char mnemonic[16] = {0};
         char op1[16]      = {0};
         char op2[16]      = {0};
  
         int fieldCount = sscanf(line, "%15s %15s %15s", mnemonic, op1, op2);
         if (fieldCount < 1) continue;
- 
-        /* Convert mnemonic to upper-case for case-insensitive matching */
         for (int i = 0; mnemonic[i]; i++)
             mnemonic[i] = toupper((unsigned char)mnemonic[i]);
  
@@ -368,19 +361,11 @@ int main() {
                     "Remaining instructions ignored.\n");
             break;
         }
- 
-        /* ── Encode into 16-bit word ────────────────────────────────────── */
         uint16_t encoded = 0;
  
         if (isRFormat(opcode)) {
-            /*
-             * R-Format: [opcode 4][R1 6][R2 6]
-             * Both operands are registers.
-             */
             int r1 = parseRegister(op1);
             int r2 = parseRegister(op2);
- 
-            /* Validate register range 0-63 */
             if (r1 < 0 || r1 > 63 || r2 < 0 || r2 > 63) {
                 fprintf(stderr,
                         "Warning: register out of range in '%s' — skipped\n",
@@ -392,13 +377,6 @@ int main() {
                                  ((r1     & 0x3F) <<  6) |
                                   (r2     & 0x3F));
         } else {
-            /*
-             * I-Format: [opcode 4][R1 6][IMM 6]
-             * Immediate is a signed 6-bit value (2's complement).
-             * We mask to 6 bits so negative values are stored correctly.
-             *
-             * Exception: SLC / SRC immediates are always positive (per spec).
-             */
             int r1  = parseRegister(op1);
             int imm = parseImmediate(op2);
  
@@ -408,9 +386,7 @@ int main() {
                         line);
                 continue;
             }
- 
-            /* Clamp/warn if immediate can't fit in 6 signed bits (-32..31) */
-            if (imm < -32 || imm > 63) {          /* 63 covers unsigned ADDRESS */
+            if (imm < -32 || imm > 63) {          
                 fprintf(stderr,
                         "Warning: immediate %d in '%s' may not fit in 6 bits\n",
                         imm, line);
@@ -418,12 +394,10 @@ int main() {
  
             encoded = (uint16_t)(((opcode & 0xF) << 12) |
                                  ((r1     & 0x3F) <<  6) |
-                                  (imm    & 0x3F));       /* mask keeps 6 LSBs */
+                                  (imm    & 0x3F));
         }
  
         instructionMemory[pc] = (short int)encoded;
- 
-        /* Diagnostic print so you can verify the encoding */
         printf("MEM[%4d] = 0x%04X  (binary: %d%d%d%d %d%d%d%d %d%d%d%d %d%d%d%d)  <- %s\n",
                pc,
                encoded,
@@ -441,33 +415,25 @@ int main() {
     }
  
     fclose(file);
-    return pc;   /* caller uses this as program_size */
+    return pc;
 }
 
 static void trim(char *s) {
-    /* trailing */
     int len = strlen(s);
     while (len > 0 && isspace((unsigned char)s[len - 1]))
         s[--len] = '\0';
-    /* leading */
     int i = 0;
     while (s[i] && isspace((unsigned char)s[i])) i++;
     if (i > 0) memmove(s, s + i, len - i + 1);
 }
- 
-/* "R5" -> 5,  "R63" -> 63 */
 static int parseRegister(const char *tok) {
     if (tok[0] == 'R' || tok[0] == 'r')
         return atoi(tok + 1);
-    return atoi(tok);          /* fallback: bare number */
+    return atoi(tok);
 }
- 
-/* Signed decimal -> int  (handles negative immediates) */
 int parseImmediate(const char *tok) {
     return atoi(tok);
 }
- 
-/* Return opcode 0-11, or -1 if unknown */
 static int getOpcode(const char *mn) {
     if (strcmp(mn, "ADD")  == 0) return ADD;
     if (strcmp(mn, "SUB")  == 0) return SUB;
@@ -483,8 +449,6 @@ static int getOpcode(const char *mn) {
     if (strcmp(mn, "STR")  == 0) return STR;
     return -1;
 }
- 
-/* R-format instructions use two register operands */
  int isRFormat(int opcode) {
     return (opcode == ADD || opcode == SUB || opcode == MUL ||
             opcode == EOR || opcode == BR);
@@ -517,7 +481,6 @@ void printmemory(int8_t *dataMemory) {
 }
 
 int8_t sign_extend_6bit(int8_t val) {
-    /* If bit 5 (the sign bit in 6-bit) is set, extend with 1's */
     if (val & 0x20) {  // 0x20 = 0b100000 (bit 5)
         val |= 0xC0;   // 0xC0 = 0b11000000 (set bits 7 and 6)
     }
@@ -535,18 +498,5 @@ void printAllInstructions(short int *instructionMemory, int program_size) {
             if (b == 12 || b == 6) printf(" ");
         }
         printf("\n");
-    }
-}
-
-void addValues(int8_t *R) {
-    for(int i = 1; i < 64; i++) {
-        R[i] = i; // Initialize registers with their index value for testing
-    }
-
-}
-
-void datavalues(int8_t *dataMemory) {
-    for(int i = 0; i < 2048; i++) {
-        dataMemory[i] = i % 128; // Initialize data memory with some values for testing
     }
 }
