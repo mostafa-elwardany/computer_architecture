@@ -250,12 +250,11 @@ int main() {
             case LDR:
             printf("Executing LDR instruction\n");
                 printf("Memory address: %d, val1(r1): %d\n", id_ex->imm, id_ex->val1);
-                id_ex->val1 = id_ex->imm; 
-                R[id_ex->r1] = dataMemory[id_ex->val1]; // Load the value from memory into the register file
-                printf("updated reg(r1): %d\n", id_ex->val1);
+                R[id_ex->r1] = dataMemory[id_ex->imm]; // Load the value from memory into the register file
+                printf("updated reg(r1): %d\n", R[id_ex->r1]);
                 break;
             case STR:
-                  printf("Executing STR instruction\n");
+                printf("Executing STR instruction\n");
                 printf("Memory address: %d, val1(r1): %d\n", id_ex->imm, id_ex->val1);
                 dataMemory[id_ex->imm] = R[id_ex->r1]; // Store the value from the register file into memory
                 printf("updated memory at address %d: %d\n", id_ex->imm, dataMemory[id_ex->imm]);
