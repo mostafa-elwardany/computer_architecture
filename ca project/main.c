@@ -72,9 +72,9 @@ int main() {
         }
     }
     printSREG(SREG);
-    /*printreg(R);
-    printmemory(dataMemory);
-    printAllInstructions(instructionMemory, program_size);*/
+    printreg(R);
+    //printmemory(dataMemory);
+    //printAllInstructions(instructionMemory, program_size);
     return 0;
 }
 
@@ -124,6 +124,7 @@ int main() {
                 }
                 id_ex->val1 = id_ex->val1 + id_ex->val2;
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+                printf("updated regs:  %d\n",id_ex->r1);
                 printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case SUB://check for overflow,sign,negative,zero flags will do later
@@ -156,6 +157,7 @@ int main() {
                 }
                 id_ex->val1 = id_ex->val1 - id_ex->val2;
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+                printf("updated regs:  %d\n",id_ex->r1);
                 printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case MUL:
@@ -172,6 +174,7 @@ int main() {
                 }
                 id_ex->val1 = id_ex->val1 * id_ex->val2;
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+                printf("updated regs:  %d\n",id_ex->r1);
                 printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case EOR:
@@ -189,6 +192,7 @@ int main() {
 
                 id_ex->val1 = id_ex->val1 ^ id_ex->val2;
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+                printf("updated regs:  %d\n",id_ex->r1);
                 printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case MOVI:
@@ -196,6 +200,7 @@ int main() {
                 printf("Immediate value: %d, val1(r1): %d\n", id_ex->imm, id_ex->val1);
                 id_ex->val1 = id_ex->imm; // Move immediate value to val1
                 R[id_ex->r1] = id_ex->val1; // Write the immediate value to the register file
+                printf("updated regs:  %d\n",id_ex->r1);
                 printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case BEQZ:
@@ -220,6 +225,7 @@ int main() {
                 }
                 id_ex->val1 = id_ex->val1 & id_ex->imm; // AND immediate value with val1
                R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+               printf("updated regs:  %d\n",id_ex->r1);
                  printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case BR:
@@ -236,6 +242,7 @@ int main() {
                 unsigned char uresult = ((uval << id_ex->imm) | (uval >> (8 - id_ex->imm)));
                 id_ex->val1 = (int8_t)uresult;  // Store back as signed
                  R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+                 printf("updated regs:  %d\n",id_ex->r1);
                  printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case SRC:
@@ -245,12 +252,14 @@ int main() {
                 unsigned char uresult2 = ((uval2 >> id_ex->imm) | (uval2 << (8 - id_ex->imm)));
                 id_ex->val1 = (int8_t)uresult2;  // Store back as signed
                 R[id_ex->r1] = id_ex->val1; // Write the result back to the register file
+                printf("updated regs:  %d\n",id_ex->r1);
                 printf("updated reg(r1): %d\n", id_ex->val1);
                 break;
             case LDR:
             printf("Executing LDR instruction\n");
                 printf("Memory address: %d, val1(r1): %d\n", id_ex->imm, id_ex->val1);
                 R[id_ex->r1] = dataMemory[id_ex->imm]; // Load the value from memory into the register file
+                printf("updated regs:  %d\n",id_ex->r1);
                 printf("updated reg(r1): %d\n", R[id_ex->r1]);
                 break;
             case STR:
@@ -455,7 +464,7 @@ static int getOpcode(const char *mn) {
 
 void printreg(int8_t *R) {
     printf("Registers: ");
-    for(int i = 0; i < 64; i++) {
+    for(int i = 0; i < 11; i++) {
         printf("R%d=%d ", i, R[i]);
     }
     printf("\n");
